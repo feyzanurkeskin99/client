@@ -14,6 +14,7 @@ import { getApiModels } from '../src/Models/ApiModels';
 import PersonInfo from "./Components/PersonInfo";
 import ContactInfo from "./Components/ContactInfo";
 import Contacts from "./Components/Contacts";
+import CallComponent from "./Components/Jijitsi/CallComponent";
 
 const socket=SocketIO("http://localhost:3001",  { transports: ['websocket', 'polling', 'flashsocket'] ,
 auth: (cb) => {
@@ -37,7 +38,7 @@ const App = () => {
   const getActiveUser = async() => {
     try{
         const res = await getApiModels("/user-login");
-        
+
         if(res.status) {
           setActiveUser(res.data.filter(dataFilter => dataFilter.Email === loginEmail.email))
           setActiveUsers(res.data)
@@ -61,7 +62,7 @@ const App = () => {
   },[])
 
   useEffect(()=>{
-    // activeUser.length === 0 ? logOut() : (<></>) 
+    // activeUser.length === 0 ? logOut() : (<></>)
   },[activeUser])
 
   const logOut=()=>{
@@ -73,7 +74,7 @@ const App = () => {
       <div className="app">
         {/* {console.log(activeUser[0].Token)} */}
         <Routes>
-          {(loginEmail.email === "") ? (
+          {(loginEmail === "") ? (
             <>
               <Route path="*" element={<Login  />} />
               <Route path="/signup" element={<SignUp />} />
@@ -81,6 +82,7 @@ const App = () => {
           ) : (
             <>
               <Route path="/" element={<ChatList />} />
+              <Route path="/chatlist" element={<ChatList />} />
               <Route path="/message-detail/:id" element={<MessageDetail activeUsers={activeUsers ? activeUsers : null} token={activeUser.length && activeUser[0].Token ? activeUser[0].Token : null}/>} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />

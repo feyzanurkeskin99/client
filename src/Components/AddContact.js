@@ -38,12 +38,18 @@ const AddContact  =()=>{
                   message.success('Kişi Kayıtı Başarıyla Yapıldı..')
                   navigate('/')
                 }else{
-                  if(result.statusCode === 300){
+                  switch (result.statusCode) {
+                    case 300:
                       message.error("Bir Hata Oldu, Tekrar Deneyiniz...")
-                  }else if(result.statusCode ===313){
+                        break;
+                    case 313:
                       message.error("Bu Kullanıcı Zaten Kayıtlı...")
+                        break;
+                    case 314:
+                        message.error("Eklemek İstediğiniz Kullanıcı Bu Uygulamayı Kullanmıyor...")
+                        break;
                   }
-                  }
+                }
             });
 
             

@@ -5,46 +5,12 @@ import InlineSVG from 'svg-inline-react';
 import { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../Components/Context'
 import LogOut from './LogOut';
-import { getApiModels } from '../Models/ApiModels';
-import { Menu, Dropdown, Space, Button, Avatar, Empty, Spin } from 'antd';
-import { DownOutlined, SmileOutlined } from '@ant-design/icons';
+import { getApiModels, deleteApiModels} from '../Models/ApiModels';
+import { Menu, Dropdown, Space, Button, Avatar, Empty, Spin, Modal, message } from 'antd';
+const { confirm } = Modal;
 
-const menu = (
-    <Menu
-      items={[
-        {
-          label: (
-            <a target="_blank" rel="noopener noreferrer" href="https://www.antgroup.com">
-              1st menu item
-            </a>
-          ),
-        },
-        {
-          label: (
-            <a target="_blank" rel="noopener noreferrer" href="https://www.aliyun.com">
-              2nd menu item (disabled)
-            </a>
-          ),
-          icon: <SmileOutlined />,
-          disabled: true,
-        },
-        {
-          label: (
-            <a target="_blank" rel="noopener noreferrer" href="https://www.luohanacademy.com">
-              3rd menu item (disabled)
-            </a>
-          ),
-          disabled: true,
-        },
-        {
-          danger: true,
-          label: 'a danger item',
-        },
-      ]}
-    />
-  );
-  
-const ChatListElement=({name,email})=>{
+
+const ChatListElement=({name,email, showDeleteConfirm})=>{
     const navigate = useNavigate()
     return(
         <div className="chatlist-element-container">
@@ -53,11 +19,21 @@ const ChatListElement=({name,email})=>{
                 <div className="chatlist-element-info" onClick={()=> 
                 navigate('/message-detail/'+name+'-'+email)}>
                 <h2 className="chatlist-element-name">{name}</h2>
-                <div className="chatlist-element-msg-spot">Msg spot</div>
-                </div>
+                <div className="chatlist-element-msg-spot"> {/* burada spot, durum gibi bişiyler olacak*/} </div>
+                </div> 
                 <div className="chatlist-element-more">
                     <InlineSVG src={HeaderIcons.more}></InlineSVG>
                 </div>
+                
+                <Dropdown overlay={
+                  <Menu>
+                    <Menu.Item key="display" onClick={showDeleteConfirm} type="dashed">
+                        Kişiyi Sil
+                      </Menu.Item>
+                  </Menu>}>
+                  <div onClick={()=> localStorage.setItem("deleteContact", email)} className="chatlist-element-more"><InlineSVG src={HeaderIcons.more}></InlineSVG></div>
+                  {/* <InlineSVG src={HeaderIcons.more}></InlineSVG> */}
+                </Dropdown>
             </div>
         </div> 
     )
@@ -92,7 +68,39 @@ const Contacts=()=> {
 
 
     }
-
+    const deleteUserApi = async() => {    
+      try{
+          const res = await deleteApiModels("/contacts?email="+loginEmail.email+"&toEmail="+ localStorage.getItem("deleteContact"))
+          console.log("----")
+          console.log(res)
+          console.log("---")
+          if(res.status && res.data.statusCode === 200) {
+            window.location.reload(false); //sayfayı yenilemek için
+            message.success('Kişi silindi..')
+          }else if(res.data.statusCode === 300) {
+            message.error('Kişi silinemedi..')
+          }
+      }catch(e){
+          alert(e.message)
+      }
+    }
+  
+    const showDeleteConfirm=()=> {
+      confirm({
+        title: 'Bu Kişiyi Silmek İstediğinizden Emin Misiniz??',
+        icon: <></>,
+        content: 'Bu Silme İşlemi Geri Alınamaz!!',
+        okText: 'Evet',
+        okType: 'danger',
+        cancelText: 'Hayır',
+        onOk() {
+          deleteUserApi()
+        },
+        onCancel() {
+          console.log('Cancel');
+        },
+      });
+    }
     useEffect(()=>{
         getContactsApi()
     },[])
@@ -118,7 +126,7 @@ const Contacts=()=> {
             <Spin tip="Loading ..." spinning={sending}>
             <div className="chatlist-container">
                 {contacts.length ? (contacts.filter((element)=> element.Name !== loginEmail.name).map((data)=>(
-                    <ChatListElement key={Math.random()*1000} name={data.Name} email={data.Email}/>
+                    <ChatListElement key={Math.random()*1000} name={data.Name} email={data.Email} showDeleteConfirm={showDeleteConfirm}/>
                 )))
                 :
                 ( <Empty /> )}

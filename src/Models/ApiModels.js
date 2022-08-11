@@ -15,7 +15,28 @@ export const deleteApiModels = async(url)=>{
             'Authorization': 'Bearer my-token',
             'My-Custom-Header': 'foobar'
         };
-        axios.delete(process.env.REACT_APP_URL+url, { headers })
+        const res = await axios.delete(process.env.REACT_APP_URL+url, { headers })
+        return {status :true, data : res.data}
+    }catch(e){
+        return {status : false, message: e}
+    }
+}
+
+export const deleteApiModelsFetch = async(url, msg)=>{
+    try{
+        const headers= new Headers();
+        headers.append("Content-Type","application/x-www-form-urlencoded");
+        const body = new URLSearchParams();
+        body.append("Delete",JSON.stringify(msg.Delete));
+    
+        let options={
+            method:"DELETE",
+            body:body,
+            headers:headers
+        }
+        return fetch(process.env.REACT_APP_URL+url,options)
+        .then(response=>response.json())
+
     }catch(e){
         return {status : false, message: e}
     }

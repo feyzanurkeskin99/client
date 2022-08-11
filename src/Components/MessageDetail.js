@@ -1,17 +1,17 @@
 import SocketIO from "socket.io-client";
 import { memo, useEffect, useState } from 'react';
-import { getApiModels } from '../Models/ApiModels';
-import { message} from 'antd'
+import { getApiModels, deleteApiModelsFetch } from '../Models/ApiModels';
 import {useLocalStorageState} from './utils'
 import { AppContext } from './Context'
 import Header from "./Header";
 import { InputIcons } from "../icon";
 import InlineSVG from 'svg-inline-react';
 import {useParams} from 'react-router-dom'
-import {Input} from 'antd'
+import {Input, Dropdown, Menu, message, Modal} from 'antd'
 import Picker from 'emoji-picker-react';
 import {Recorder} from 'react-voice-recorder'
 import 'react-voice-recorder/dist/index.css'
+const { confirm } = Modal;
 
 const { TextArea } = Input;
 // const socket=SocketIO("http://localhost:3001",  { transports: ['websocket', 'polling', 'flashsocket'] ,
@@ -29,37 +29,164 @@ const { TextArea } = Input;
     });
   }
   })
+const date=new Date()
 
-const MessageArea = memo(({messages, loginEmail, id}) => {
+  const counterDate = (array, date)=>{
+    if(!array.includes(date)){ //bu eleman dizide mevcut değilse
+      array.push(date);
+      return false;
+    }else if(array === []){
+      array.push(date)
+      return false;
+    }
+    else{
+      return true;
+    }
+
+  }
+const MessageArea = memo(({messages, loginEmail, id, menu}) => {
+  var infoDate= []
   return (
       messages.map((message, index)=>
-        ((message.Email === loginEmail.email) ? 
-            <h2 key={Math.random()*1000} className="msg-right-container"> 
-            <div className="msg-right">
+        ((message.Email === loginEmail.email) ?
+            <h2 key={Math.random()*1000} className="msg-right-container">
+            <div>
+
+            {//tarih kontrolü
+              counterDate(infoDate, message.Date) ? (
+                <></>
+              ) : (
+                <div className="msg-right-date-container">
+                <div className="msg-date">{new Date(date).toLocaleString('tr', {day:"numeric", month:"long", year:"numeric"}) === message.Date ? "Today" : message.Date}</div>
+                </div>
+              )
+            }
+
+            <div className="msg-right" >
             {
               message.Message ? (
                 //<audio className="audio-right" controls="controls" src={message.Message} type="audio/mp3" />
                 message.Message.charAt(0).toUpperCase() + message.Message.slice(1)
                 ):(<></>)}
+                <Dropdown 
+                overlay={
+                  <Menu>
+                    <Menu.Item key="display" type="dashed" onClick={() => showDeleteConfirm(message)}>
+                        Mesajı Sil
+                      </Menu.Item>
+                  </Menu>
+                }
+                trigger={['hover']}>
+                <div
+                  className="messages-context-menu"
+                >
+                </div>
+              </Dropdown>
             <div className="message-time">{message.Time.split(":")[0]}:{message.Time.split(":")[1]}</div>
+            </div>
             </div>
             </h2>
           : (message.Email === id.split('-')[1]) ?
           <h2 key={Math.random()*1000} className="msg-left-container">
-            <div className="msg-left">
+            <div>
+            {//tarih kontrolü
+              counterDate(infoDate, message.Date) ? (
+                <></>
+              ) : (
+                <div className="msg-left-date-container">
+                <div className="msg-date">{new Date(date).toLocaleString('tr', {day:"numeric", month:"long", year:"numeric"}) === message.Date ? "Today" : message.Date}</div>
+                </div>
+              )
+            }
+            <div className="msg-left" >
             {
               message.Message ? (
                 message.Message.charAt(0).toUpperCase() + message.Message.slice(1)
                 ):(<></>)
             }
-            
+            <Dropdown 
+            overlay={
+            <Menu>
+                    <Menu.Item key="display" type="dashed" onClick={() => showDeleteConfirm(message)}>
+                        Mesajı Sil
+                      </Menu.Item>
+                  </Menu>
+            } trigger={['hover']}>
+              <div
+                className="messages-context-menu"
+              >
+              </div>
+            </Dropdown>
             <div className="message-time">{message.Time.split(":")[0]}:{message.Time.split(":")[1]}</div>
             </div>
+            </div>
           </h2>
-          : <></>) 
+          : <></>)
       )
   )
 })
+
+const showDeleteConfirm=(message)=> {
+  console.log(message)
+  confirm({
+    title: 'Bu Mesajı Silmek İstediğinizden Emin Misiniz??',
+    icon: <></>,
+    content: 'Bu Silme İşlemi Geri Alınamaz!!',
+    okText: 'Evet',
+    okType: 'danger',
+    cancelText: 'Hayır',
+    onOk() {
+      deleteMessageApi(message)
+    },
+    onCancel() {
+      console.log('Cancel');
+    },
+  });
+}
+
+const deleteMessageApi = async(message) => {
+  // try{
+        const obj={};
+          obj.Message= message.Message;
+          obj.Email= message.Email;
+          obj.Name= message.Name;
+          obj.date= message.Date;
+          obj.Time= message.Time;
+          obj.ToName= message.ToName;
+          obj.ToEmail= message.ToEmail;
+          deleteApiModelsFetch("/messages",{Delete:obj})
+          .then(result=>{
+                if(result.status) {
+                  window.location.reload(false) 
+                  message.success('Mesaj Silindi..')
+                }else{
+                  if(result.statusCode === 300){
+                      message.error("Bir Hata Oldu, Mesajı Silmeyi Tekrar Deneyiniz...")
+                  }else{
+                      message.error('Bir Şeyler Ters Gitti, Mesajı Silmeyi Tekrar Deneyiniz..')
+                  }       
+                  }
+            });
+  // }catch(e){
+  //     alert(e.message)
+  // }
+}
+
+
+
+
+
+  //mesaja basılı tutma eventi
+  const keydownFunction=(e)=> {
+    setTimeout(() =>{
+      alert(e)
+      },1500)
+    }
+
+    const keyupFunction=(e)=> {
+      document.getElementById("demo").style.backgroundColor = "green";
+    }
+    //mesaja basılı tutma eventi kapandı
 
 const MessageDetail =({token, activeUsers})=> {
 
@@ -90,10 +217,10 @@ const MessageDetail =({token, activeUsers})=> {
 
 
   socket.on('message', async(data)=>{
-    
+
     setMessages([...messages, data])
-    
-  }) 
+
+  })
 
   useEffect(()=>{
     getMessagesApi()
@@ -103,8 +230,6 @@ const MessageDetail =({token, activeUsers})=> {
     socket.on('token_verify_socket', (data)=>{
       console.log(data)
     })
-    
-    
       // Execute a function when the user releases a key on the keyboard
     document.getElementById("msgInput").addEventListener("keyup", function(event) {
     // Number 13 is the "Enter" key on the keyboard
@@ -138,8 +263,8 @@ const MessageDetail =({token, activeUsers})=> {
   // const setMessagesApi = async() => {
   //   // setSending(true)
   //   // form.submit();
-  
-    
+
+
   // socket.on('message', (data)=>{
   // console.log(data)
   //   try{
@@ -155,7 +280,7 @@ const MessageDetail =({token, activeUsers})=> {
   //         obj.ToName= data.to;
   //         obj.ToEmail= data.toEmail;
   //         // obj.Password= password;
-  //         setMessagesApiModels("/messages",{Messages:obj})  
+  //         setMessagesApiModels("/messages",{Messages:obj})
   //         .then(result=>{
   //               if(result.status === true) {
   //                 getMessagesApi()
@@ -199,7 +324,7 @@ const MessageDetail =({token, activeUsers})=> {
     document.getElementById('msgInput').value=''
     setText('')
     window.scrollTo(0, document.body.scrollHeight);
-    
+
     // console.log(date)
     // console.log(new Date(date).toLocaleString('tr', {day:"numeric", month:"long", year:"numeric"}))
     // setMessagesApi()
@@ -210,7 +335,7 @@ const MessageDetail =({token, activeUsers})=> {
     if(url !== null){
       // var blob = new Blob(url.chunks, { 'type' : 'audio/*; codecs=opus' });
       const file = new File([url.blob],"audio.mp3", { 'type' : 'audio/*; codecs=opus' })
-      console.log(typeof file)
+      console.log(url)
       socket.emit('dataMsg',{
       msg:file,
       email:loginEmail.email,
@@ -226,7 +351,7 @@ const MessageDetail =({token, activeUsers})=> {
     document.getElementById('msgInput').value=''
     setText('')
     window.scrollTo(0, document.body.scrollHeight);
-    
+
     // console.log(date)
     // console.log(new Date(date).toLocaleString('tr', {day:"numeric", month:"long", year:"numeric"}))
     // setMessagesApi()
@@ -274,6 +399,7 @@ const MessageDetail =({token, activeUsers})=> {
     }
   },[text])
 
+
     return (
       <AppContext.Provider value={{loginEmail, setLoginEmail}}>
               <div className="App messages-app">
@@ -290,7 +416,7 @@ const MessageDetail =({token, activeUsers})=> {
                   showUIAudio
                   handleAudioStop={(data) => handleAudioStop(data)}
                   handleRest={() => handleRest()} />
-                <InlineSVG className="voice-trash hidden" onClick={()=> 
+                <InlineSVG className="voice-trash hidden" onClick={()=>
                 {handleRest()
                   document.querySelector("._1ceqH").classList.remove("hidden")
                   document.querySelector(".voice-trash").classList.add("hidden")
@@ -299,27 +425,27 @@ const MessageDetail =({token, activeUsers})=> {
                 <Picker onEmojiClick={onEmojiClick} />
 
                 <TextArea value={text} autoSize id="msgInput" placeholder='Mesajınızı yazın..' type="text" onChange={(event) => setText(event.target.value)}/>
-                <div className="input-svgs hidden"> <InlineSVG src={InputIcons["emoji-picker"]} onClick={()=> document.querySelector(".emoji-picker-react").classList.toggle("hidden")}/> 
+                <div className="input-svgs hidden"> <InlineSVG src={InputIcons["emoji-picker"]} onClick={()=> document.querySelector(".emoji-picker-react").classList.toggle("hidden")}/>
                 <InlineSVG id="msgSend" onClick={()=>
-                {sendData() 
+                {sendData()
                 document.querySelector(".emoji-picker-react").classList.add("hidden")}
                 } src={InputIcons.send}></InlineSVG>
                 </div>
                 <InlineSVG id="voiceSend" onClick={()=>
-                {sendVoice(state.audioDetails)     
+                {sendVoice(state.audioDetails)
                   handleRest()
 
                   document.querySelector("._1ceqH").classList.remove("hidden")
                   document.querySelector(".voice-trash").classList.add("hidden")
                   document.querySelector(".voice-send").classList.add("hidden")
                 }
-                } className='voice-send hidden' src={InputIcons.send}></InlineSVG> 
+                } className='voice-send hidden' src={InputIcons.send}></InlineSVG>
                 {/* <button onClick={()=>( setDatas([]) )}>Temizle</button> */}
                 </div>
               </div>
       </AppContext.Provider>
     );
-  
+
 }
 
 export default MessageDetail;
