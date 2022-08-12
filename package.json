@@ -1,5 +1,5 @@
 {
-  "homepage": "https://feyzanurkeskin99.github.io/ChatAppClient",
+  "homepage": "https://feyzanurkeskin99.github.io/client",
   "name": "client",
   "version": "0.1.0",
   "private": true,
@@ -23,7 +23,7 @@
     "react-input-emoji": "^4.1.0",
     "react-redux": "^7.2.8",
     "react-router-dom": "^6.3.0",
-    "react-scripts": "5.0.0",
+    "react-scripts": "^5.0.0",
     "react-voice-recorder": "^2.1.2",
     "socket.io": "^4.4.1",
     "socket.io-client": "^4.4.1",
@@ -31,8 +31,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "predeploy" : "npm run build",
-    "deploy" : "gh-pages -d build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
