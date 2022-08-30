@@ -16,10 +16,10 @@ const LogOut=()=> {
     try{
         deleteApiModels("/user-login?email="+loginEmail.email)
         .then(result=>{
-          if(result.statusCode === 200) {
-            message.success('Kullanıcı silindi..')
+          if(result.data.statusCode === 200) {
+            message.success('Çıkış Yapıldı..')
             
-          }else if(result.statusCode === 300){
+          }else if(result.data.statusCode === 300){
               message.error("Bir Hata Oldu, çıkış Yapmayı Tekrar Deneyiniz...")
           }else{
             message.error('Bir Şeyler Ters Gitti, çıkış Yapmayı Tekrar Deneyiniz..')

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { setApiModels } from './Models/ApiModels';
 import { message} from 'antd'
 
-const socket=SocketIO("http://localhost:3001",  { transports: ['websocket', 'polling', 'flashsocket'] })
+const socket=SocketIO("https://feyzanurkeskin99.github.io:3001",  { transports: ['websocket', 'polling', 'flashsocket'] })
 
 function App() {
 

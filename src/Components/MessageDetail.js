@@ -11,25 +11,17 @@ import {Input, Dropdown, Menu, message, Modal} from 'antd'
 import Picker from 'emoji-picker-react';
 import {Recorder} from 'react-voice-recorder'
 import 'react-voice-recorder/dist/index.css'
+
 const { confirm } = Modal;
-
 const { TextArea } = Input;
-// const socket=SocketIO("http://localhost:3001",  { transports: ['websocket', 'polling', 'flashsocket'] ,
-// auth: (cb) => {
-//   cb({
-//     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImZleXphbnVyQGdtYWlsLmNvbSIsIm5hbWUiOiJGZXl6YW51ciIsImlhdCI6MTY1MjEwMDY5NywiZXhwIjoxNjUyMTA3ODk3fQ.9iYyoNRN5nU_issVVLGXnCbBYRzcZ5xSwIP22oPKuvY"
-//   });
-// }
-// })
-
-  const socket=SocketIO("http://localhost:3001",  { transports: ['websocket', 'polling', 'flashsocket'] ,
-  auth: (cb) => {
-    cb({
-      token: localStorage.getItem("email").split(",")[2].split('"')[3]
-    });
-  }
-  })
 const date=new Date()
+const socket=SocketIO("http://localhost:3001",  { transports: ['websocket', 'polling', 'flashsocket'] ,
+auth: (cb) => {
+  cb({
+    token: localStorage.getItem("email").split(",")[2].split('"')[3]
+  });
+}
+})
 
   const counterDate = (array, date)=>{
     if(!array.includes(date)){ //bu eleman dizide mevcut değilse
@@ -44,14 +36,54 @@ const date=new Date()
     }
 
   }
+  const findWordCount =(word)=>{ 
+    //kelime sayısını belirleyerek more seçeneği eklemek için cümlede kaç kelime olduğunu tespit ettim
+    var array = []
+    array = word.split(" ")
+    return array.length
+  }
+
+  //kelime sayısı 50 den büyükse more.. seçeneği eklenecek
+  const moreWordShow =(wordCount, message)=>{
+    var obj = {}
+    var limitedWordArray = []
+    var msg = ""
+    limitedWordArray = message.split(" ") //her mesajı kelimelerine ayırıyor
+    if(wordCount > 100){
+      for(var i=0 ; i < 50 ; i++){
+        if(wordCount <= i) break;
+        msg = msg + " " + limitedWordArray[i]
+      }
+      obj.msg = msg
+      obj.msgMore =message
+      obj.status = true
+      return obj
+    }else{
+      obj.msg = message
+      obj.status = false
+      return obj
+    }
+  }
+  
 const MessageArea = memo(({messages, loginEmail, id, menu}) => {
   var infoDate= []
+  
+  const showMoreMsg = (e, direction) => {
+    // innerhtml gibi bir şey kullanarak burada asıl mesajı göstermeyi sağla
+    if(direction){
+      console.log(e.currentTarget.closest(".msg-right"))
+      console.log(direction)
+    }else{
+      console.log(e.currentTarget.closest(".msg-left"))
+      console.log(direction)
+    }
+  }
+
   return (
       messages.map((message, index)=>
         ((message.Email === loginEmail.email) ?
             <h2 key={Math.random()*1000} className="msg-right-container">
             <div>
-
             {//tarih kontrolü
               counterDate(infoDate, message.Date) ? (
                 <></>
@@ -62,12 +94,14 @@ const MessageArea = memo(({messages, loginEmail, id, menu}) => {
               )
             }
 
-            <div className="msg-right" >
+            <div className="msg-right" data-index={index}>
             {
-              message.Message ? (
+              moreWordShow(findWordCount(message.Message), message.Message).msg ? (
                 //<audio className="audio-right" controls="controls" src={message.Message} type="audio/mp3" />
-                message.Message.charAt(0).toUpperCase() + message.Message.slice(1)
+                moreWordShow(findWordCount(message.Message), message.Message).msg.charAt(0).toUpperCase() + moreWordShow(findWordCount(message.Message), message.Message).msg.slice(1)
+                
                 ):(<></>)}
+                {moreWordShow(findWordCount(message.Message), message.Message).status ? <div className="msg-more-button" onClick={(e) => showMoreMsg(e, true)}>...more</div> : <></>}
                 <Dropdown 
                 overlay={
                   <Menu>
@@ -98,12 +132,14 @@ const MessageArea = memo(({messages, loginEmail, id, menu}) => {
                 </div>
               )
             }
-            <div className="msg-left" >
+            <div className="msg-left" data-index={index}>
             {
-              message.Message ? (
-                message.Message.charAt(0).toUpperCase() + message.Message.slice(1)
+              moreWordShow(findWordCount(message.Message), message.Message).msg ? (
+                moreWordShow(findWordCount(message.Message), message.Message).msg.charAt(0).toUpperCase() + moreWordShow(findWordCount(message.Message), message.Message).msg.slice(1)
                 ):(<></>)
             }
+            {moreWordShow(findWordCount(message.Message), message.Message).status ? <div className="msg-more-button" onClick={(e) => showMoreMsg(e, false)}>...more</div> : <></>}
+            
             <Dropdown 
             overlay={
             <Menu>
@@ -172,10 +208,6 @@ const deleteMessageApi = async(message) => {
   // }
 }
 
-
-
-
-
   //mesaja basılı tutma eventi
   const keydownFunction=(e)=> {
     setTimeout(() =>{
@@ -189,13 +221,14 @@ const deleteMessageApi = async(message) => {
     //mesaja basılı tutma eventi kapandı
 
 const MessageDetail =({token, activeUsers})=> {
+  console.log("rerender")
 
   const [loginEmail, setLoginEmail] = useLocalStorageState("email", "");
   const [text, setText]=useState('');
   const [submit, setSubmit]=useState(false);
   const [datas, setDatas]=useState([]);
   const [messages, setMessages]=useState([]);
-  const [socketMessages, setSocketMessages]=useState([]);
+  const [limit, setLimit] = useState(20);
   const [state, setState] = useState({audioDetails:{
     url: null,
     blob: null,
@@ -212,18 +245,15 @@ const MessageDetail =({token, activeUsers})=> {
   let { id } = useParams();
 
   useEffect(()=>{
-    window.scrollTo(0, document.body.scrollHeight);
+    limit === 20 ? (
+      window.scrollTo(0, document.body.scrollHeight)) : (
+        window.scrollTo(0, 0)
+    )
   },[messages])
-
-
-  socket.on('message', async(data)=>{
-
-    setMessages([...messages, data])
-
-  })
 
   useEffect(()=>{
     getMessagesApi()
+
   },[id])
 
   useEffect(()=>{
@@ -243,68 +273,28 @@ const MessageDetail =({token, activeUsers})=> {
   });
   document.querySelector(".emoji-picker-react").classList.add("hidden")
   //document.querySelector("._2uz65._1bSom").addEventListener("click", sendVoice())
+  
   },[])
-
-
 
   const getMessagesApi = async() => {
       try{
-          const res = await getApiModels("/messages?email="+loginEmail.email+"&toEmail="+id.split('-')[1]);
-          setSocketMessages([])
+          const res = await getApiModels("/messages?email="+loginEmail.email+"&toEmail="+id.split('-')[1]+"&limit="+limit);
+          let socketMessages = [] //socketten gelen mesajlar
+          let dbMessages = [] //db'den sayfa yüklendiğinde çekilen mesajlar
           if(res.status) {
+            dbMessages.push(res.data)
             setMessages(res.data)
-            setSocketMessages(res.data)
+            socket.on('message', async(data)=>{
+              socketMessages.push(data)
+              console.log(data)
+              setMessages([...res.data, ...socketMessages])
+            })
           }
+          
       }catch(e){
           alert(e.message)
       }
   }
-
-  // const setMessagesApi = async() => {
-  //   // setSending(true)
-  //   // form.submit();
-
-
-  // socket.on('message', (data)=>{
-  // console.log(data)
-  //   try{
-  //     const obj={};
-  //     if(loginEmail === '' || id === ''){
-  //         message.error('Mesaj Gönderilemedi, Zorunlu Alanları Doldurunuz..')
-  //     }else if(loginEmail.email === data.email){
-  //         obj.Message= data.text;
-  //         obj.Email= loginEmail.email;
-  //         obj.Name= loginEmail.name;
-  //         obj.date= data.date;
-  //         obj.Time= data.time;
-  //         obj.ToName= data.to;
-  //         obj.ToEmail= data.toEmail;
-  //         // obj.Password= password;
-  //         setMessagesApiModels("/messages",{Messages:obj})
-  //         .then(result=>{
-  //               if(result.status === true) {
-  //                 getMessagesApi()
-  //                 message.success('Mesaj Gönderildi..')
-  //               }else{
-  //                 if(result.statusCode === 300){
-  //                     message.error("Bir Hata Oldu, Mesaj Göndermeyi Tekrar Deneyiniz...")
-  //                 }else{
-  //                     message.error('Bir Şeyler Ters Gitti, Mesaj Göndermeyi Tekrar Deneyiniz..')
-  //                 }
-
-  //                 }
-  //           });
-  //     }else if(loginEmail.email === data.toEmail){
-  //       getMessagesApi()
-  //     }else{
-  //       message.error('Mesaj Gönderilemedi, Tekrar Dene..')
-  //     }
-  // }catch(e){
-  //     message.error('Mesaj Gönderilemedi.. '+e);
-
-  // }
-  // })
-  // }
 
   const sendData=()=>{
     const date=new Date()
@@ -369,8 +359,6 @@ const MessageDetail =({token, activeUsers})=> {
     await setState({ audioDetails: data });
   }
 
-
-
   const handleRest =()=>{
     const reset = {
     url: null,
@@ -390,6 +378,12 @@ const MessageDetail =({token, activeUsers})=> {
   },[state])
 
   useEffect(()=>{
+    console.log(limit)
+    getMessagesApi()
+    //window.scrollTo({top: document.body.scrollHeight});
+  },[limit])
+
+  useEffect(()=>{
     if(text !== ''){
       document.querySelector(".input-svgs").classList.remove("hidden")
       document.querySelector("._1ceqH").classList.add("hidden")
@@ -399,10 +393,34 @@ const MessageDetail =({token, activeUsers})=> {
     }
   },[text])
 
+  const attachOptions =()=>{
+    document.querySelector(".attach-elements").classList.remove("hidden")
+  }
 
+  const attachOptionsClose =()=>{
+    document.querySelector(".attach-elements").classList.add("hidden")
+  }
+
+  const sendFile=(type)=>{
+    console.log(type)
+  }
     return (
       <AppContext.Provider value={{loginEmail, setLoginEmail}}>
+            <div className="attach-elements hidden">
+              <div className="bosluk"  onClick={attachOptionsClose}></div>
+              <div className="options-container">
+                <div className="options-element" onClick={() => sendFile("camera")}> <InlineSVG className="options-element-icon" src={InputIcons.camera}/> Fotoğraf Çek</div>
+                <div className="options-element" onClick={() => sendFile("gallery")}> <InlineSVG className="options-element-icon" src={InputIcons.gallery}/> Galeriden Seç</div>
+                <div className="options-element" onClick={() => sendFile("file")}> <InlineSVG className="options-element-icon" src={InputIcons.attach}/> Dosya Yükle</div>
+              </div>
+              <div className="cancel-button" onClick={attachOptionsClose}>İPTAL</div>
+            </div>
               <div className="App messages-app">
+              {
+                //daha fazla butonu 
+                messages.length < 20 ? <></> :
+                <div className="more-messages" onClick={()=> setLimit(limit + 10)}> <div className="text">Daha fazla göster..</div> </div>
+              }
                 <Header email={id.split('-')[1]} name={id.split('-')[0]} activeUsers={activeUsers}/>
                 <div className="messages-container"><MessageArea loginEmail={loginEmail} messages={messages} id={id} /></div>
                 {/* <Recorder
@@ -410,6 +428,7 @@ const MessageDetail =({token, activeUsers})=> {
                   audioURL="blob:http://localhost:3000/6579ba4d-3cb9-404c-8e01-d0cb1bb3c7e0"
                   showUIAudio /> */}
                 <div className="input-message">
+                <div className="attach" onClick={attachOptions}> <InlineSVG src={InputIcons.attach}></InlineSVG> </div>
                 <Recorder
                   record={true}
                   audioURL={state.audioDetails.url}
@@ -448,4 +467,4 @@ const MessageDetail =({token, activeUsers})=> {
 
 }
 
-export default MessageDetail;
+export default memo (MessageDetail);

@@ -53,13 +53,14 @@ const ContactInfo  =()=>{
     }
       // setSending(false)
     }
+
     const updatePerson = async() => {
       // setSending(true)
       // form.submit();
     const obj={};
     try{
         if(inputName === '' || inputEmail === ''){
-            message.error('Kayıt yapılamadı, zorunlu alanları doldurunuz..')
+            message.error('Güncelleme yapılamadı, zorunlu alanları doldurunuz..')
         }else{
           obj.Name= inputName;
           obj.Email= inputEmail;
@@ -79,7 +80,7 @@ const ContactInfo  =()=>{
             
         }
     }catch(e){
-        message.error('Kayıt Yapılamadı.. '+e);
+        message.error('Güncelleme Yapılamadı.. '+e);
     }
       // setSending(false)
     }

@@ -2,8 +2,8 @@ import { UserOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { HeaderIcons, InputIcons } from "../icon";
 import InlineSVG from "svg-inline-react";
-import { useContext, useState, useEffect } from "react";
-import { AppContext } from "../Components/Context";
+import { memo, useContext, useState, useEffect } from "react";
+import { AppContext } from "./Context";
 import LogOut from "./LogOut";
 import { getApiModels, deleteApiModels } from "../Models/ApiModels";
 import {
@@ -48,7 +48,7 @@ const ChatListElement = ({ name, email, showDeleteConfirm, count, msg, status}) 
           onClick={() => navigate("/message-detail/" + name + "-" + email)}
         >
           <h2 className="chatlist-element-name">{name}</h2>
-          <div className="chatlist-element-msg-spot"> {status} {msg}</div>
+          <div className="chatlist-element-msg-spot"> {status ? "You:" : ""} {msg}</div>
         </div>
         <Dropdown
           overlay={
@@ -71,7 +71,7 @@ const ChatListElement = ({ name, email, showDeleteConfirm, count, msg, status}) 
           </div>
           {/* <InlineSVG src={HeaderIcons.more}></InlineSVG> */}
         </Dropdown>
-        <Badge count={count.email === email ? count.count : 0}></Badge>
+        <Badge count={count}></Badge>
         {/* <div className="chatlist-element-more">
                     <InlineSVG src={HeaderIcons.more}></InlineSVG>
                 </div> */}
@@ -79,65 +79,23 @@ const ChatListElement = ({ name, email, showDeleteConfirm, count, msg, status}) 
     </div>
   );
 };
-// const contacts=[
-//     {
-//         name:"Ramazan",
-//         email:"ramazan@gmail.com"
-//     },
-//     {
-//         name:"Yasemin",
-//         email:"yasemin@gmail.com"
-//     },
-//     {
-//         name:"Feyzanur",
-//         email:"feyzanur@gmail.com"
-//     },
-//     {
-//         name:"Sueda",
-//         email:"sueda@gmail.com"
-//     },
-//     {
-//         name:"Zehra",
-//         email:"zehra@gmail.com"
-//     },
-//     {
-//         name:"Fatma",
-//         email:"fatma@gmail.com"
-//     }
-// ]
 
 const moreChoices = () => {
   document.querySelector(".more-choices-container").classList.toggle("hidden");
 };
 
 const ChatList = () => {
+  console.log("reredner")
   const navigate = useNavigate();
   const { loginEmail, setLoginEmail } = useContext(AppContext);
   const [contacts, setContacts] = useState([]);
   const [contact, setContact] = useState([]);
   const [sending, setSending] = useState(true);
-  const [count, setCount] = useState({
-    email: "",
-    count: 0,
-  });
+  //const [count, setCount] = useState({
+  //  email: "",
+  //  count: 0,
+  //});
   const [refresh, setRefresh] = useState(parseInt(Math.random() * 1000));
-
-  socket.on("message", (data) => {
-    //getContactsApi()
-    console.log(data.ToEmail === loginEmail.email ? data : false);
-    if (data.ToEmail === loginEmail.email) {
-      //mesaj gönderilen kişi bensem..
-      setCount({ email: data.Email, count: count.count + 1 });
-      const countMessage = {
-        email: data.ToEmail,
-        count: count.email === data.email ? count.count + 1 : count.count,
-      };
-      console.log(countMessage);
-      localStorage.setItem("count", countMessage);
-    } else {
-      <></>;
-    }
-  });
 
   const deleteUserApi = async () => {
     try {
@@ -192,6 +150,7 @@ const ChatList = () => {
   };
 
   const getContactsApi = async () => {
+    let count = 0
     setSending(true);
     try {
       const res = await getApiModels("/messages?email=" + loginEmail.email);
@@ -199,6 +158,42 @@ const ChatList = () => {
       setContacts([]);
       if (res.status) {
         setContacts(res.data);
+        socket.on("message", (data) => {
+          //getContactsApi()
+          console.log(data.ToEmail === loginEmail.email ? data : false);
+          if (data.ToEmail === loginEmail.email) {
+            //mesaj gönderilen kişi bensem..
+            //setCount({ email: data.Email, count: count.count + 1 });
+            //const countMessage = {
+            //  email: data.ToEmail,
+            //  count: count.email === data.email ? count.count + 1 : count.count
+            //};
+            //console.log(countMessage);
+            //localStorage.setItem("count", countMessage);
+            
+            let arr = []
+            let fixArr = {}
+            res.data.map((element) => {
+              if(element.Email === data.Email){
+                fixArr.Email =element.Email
+                fixArr.Message = data.Message
+                fixArr.Status = true
+                fixArr.ToName = element.ToName
+                fixArr.Count = (element.Count ? ((element.Count) + 1) : 1) //res data dan count her zaman 0 gelecek bu yüzden hep 1 oluyor
+                arr.push(fixArr)
+              }else{
+                arr.push(element)
+              }
+            })
+            setContacts(arr)
+      
+            console.log("<<<<<")
+            console.log(res.data)
+            console.log("<<<<<")
+          } else {
+            <></>;
+          }
+        });
       }
     } catch (e) {
       alert(e.message);
@@ -209,14 +204,12 @@ const ChatList = () => {
   useEffect(() => {
     getContactsApi();
     getContactApi();
+
   }, []);
 
   useEffect(() => {
     setRefresh(parseInt(Math.random() * 1000));
   }, [contacts]);
-  useEffect(() => {
-    console.log(count);
-  }, [count]);
 
   return (
     <>
@@ -234,7 +227,7 @@ const ChatList = () => {
           className="chatlist-svg more"
           src={HeaderIcons.more}
         ></InlineSVG>
-        <div className="more-choices-container hidden">
+        <div className="more-choices-container hidden" onClick={() => moreChoices()}>
           <div className="more-choices">
             <LogOut></LogOut>
           </div>
@@ -253,11 +246,11 @@ const ChatList = () => {
               ?.map((data) => (
                 <ChatListElement
                   key={Math.random() * 1000}
-                  count={count}
+                  count={data.Count !== 0 ? data.Count : 0}
                   showDeleteConfirm={showDeleteConfirm}
-                  name={
+                  name={ //gelen mesaj aktif kişiden değil de karşıdansa contacts ta bulunan ismini kullanıyoruz
                     contact.find((element) => element.Email === data.Email)
-                      ? data.ToName
+                      ? contact.find((element) => element.Email === data.Email).Name
                       : data.Email
                   }
                   email={data.Email}
@@ -283,4 +276,4 @@ const ChatList = () => {
   );
 };
 
-export default ChatList;
+export default memo(ChatList);

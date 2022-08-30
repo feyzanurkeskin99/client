@@ -2,7 +2,10 @@ import axios from 'axios';
 
 export const getApiModels = async(url)=>{
     try{
-        const res = await axios.get(process.env.REACT_APP_URL+url);
+        
+        const headers= new Headers();
+        headers.append("Content-Type","application/x-www-form-urlencoded");
+        const res = await axios.get(process.env.REACT_APP_URL+url, {headers});
         return {status :true, data : res.data}
     }catch(e){
         return {status : false, message: e}
